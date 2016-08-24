@@ -85,8 +85,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     p = KafkaProducer(bootstrap_servers = setting["bootstrap_servers"], partitioner = None);  
                     
                     self.token = self.settings["meta"]["token"]
-                    for key, val in setting.iteritems():
-                        p.config[key] = val;
+                    for key, val in setting.items():
+                        p.config[key] = val
                     
                     p.config['client_id'] = self.token;          
                                                  
@@ -105,14 +105,14 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         username = self.pubKey + "|" + self.subKey;
         
         def conCallback(client, userdata, flags, rc):
-            self.__mqtt.publish("presence/" + self.pubKey + "/" + token, payload=bytes([0]), qos=1, retain=True);
+            self.__mqtt.publish("presence/" + self.pubKey + "/" + token, payload=bytearray([0]), qos=1, retain=True);
         
         def messageReceivedCallback():
             pass
                 
         self.__mqtt = mqtt.Client(clientId, True, None, mqtt.MQTTv311, transport="tls");        
         self.__mqtt.username_pw_set(username, self.secretKey);
-        self.__mqtt.will_set(topic = "presence/" + self.pubKey + "/" + token, payload=bytes([0]), qos=1, retain=True);
+        self.__mqtt.will_set(topic = "presence/" + self.pubKey + "/" + token, payload=bytearray([0]), qos=1, retain=True);
         
         self.__mqtt.on_connect = conCallback
         
@@ -238,7 +238,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     c = GroupConsumer(self.subKey, bs, group, self.__permissions, self.cipher);
                     self.__consumerMap[group][bs] = c;
             
-            for bs, gc in self.__consumerMap[group].iteritems():
+            for bs, gc in self.__consumerMap[group].items():
                 
                 def asgCallback(assignment):
                     
@@ -261,8 +261,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             pass
 
     def unsubscribe(self, topic, channel=-1, callback=None):        
-        for groupName, consmap in self.__consumerMap.iteritems():
-            for conString, gc in consmap.iteritems():
+        for groupName, consmap in self.__consumerMap.items():
+            for conString, gc in consmap.items():
                 gc.unsubscribe(self.subKey + "." + topic);
                 
                 meta = SubMeta(groupName, topic, channel, conString);
@@ -275,8 +275,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
     def publish(self, topic, msg, channel=-1, callback=None):
         
-        assert(topic is not None)
-        assert(msg is not None)       
+        assert(topic is not None), 'Topic is required'
+        assert(msg is not None and isinstance(msg, bytes)), 'Message body is required an an non-empty bytearray'
         
         try:            
             if topic == None:
@@ -297,18 +297,18 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             if self.__producerMap == None or len(self.__producerMap) == 0:
                 raise MagistralException("Unable to publish message -> Client is not connected to the Service");
             
-            token = self.__producerMap.keys()[0];
+            token = list(self.__producerMap.keys())[0];
             p = self.__producerMap[token];
             
             realTopic = self.pubKey + "." + topic;     
             
-            key = bytes(self.secretKey + "-" + token);
+            key = bytes(self.secretKey + "-" + token, 'utf8')
             
             if channel == -1:
                 for ch in chs:
-                    p.send(topic = realTopic, value = bytes(msg), key = key, partition = int(ch));
+                    p.send(topic = realTopic, value = msg, key = key, partition = int(ch));
             else: 
-                future = p.send(topic = realTopic, value = bytes(msg), key = key, partition = int(channel)).add_callback(lambda ack : pubCallback(ack));
+                future = p.send(topic = realTopic, value = msg, key = key, partition = int(channel)).add_callback(lambda ack : pubCallback(ack));
                         
                 def pubCallback(ack):                    
                     if callback is not None: 
@@ -318,8 +318,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                 return self.__recordMetadata2PubMeta(ack);
             
         except:
-            self.logger.error("Error [%s] : %s", sys.exc_info()[0], sys.exc_info()[1])            
-            raise MagistralException(sys.exc_info()[1]);
+            ex = list(sys.exc_info())
+            self.logger.error("Error [%s] : %s", ex[0], ex[1])            
+            raise MagistralException(ex[1]);
 
     def topics(self, callback=None):
             

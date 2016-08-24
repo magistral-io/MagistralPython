@@ -54,7 +54,9 @@ class MagistralConsumer(object):
         endIsNotReached = True;
         while endIsNotReached:
             
-            for record in data.values()[0]:
+            records = list(data.values())
+            
+            for record in records[0]:
                 index = record[2];
                 if index >= last - 1: endIsNotReached = False;
                 

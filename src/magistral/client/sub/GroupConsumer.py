@@ -92,7 +92,7 @@ class GroupConsumer(Thread):
                 
                 while recordsTotally(data) > 0:
                     
-                    for x, values in data.iteritems():
+                    for x, values in data.items():
                         
                         highest = self.__offsets[x];
                         for value in values:
@@ -163,7 +163,7 @@ class GroupConsumer(Thread):
         
         self.__consumer.assign(tpas);
         
-        for key, val in self.__configs.iteritems():
+        for key, val in self.__configs.items():
             self.__consumer.config[key] = val;
                 
         if callback is not None : callback(self.__consumer.assignment());
@@ -175,7 +175,7 @@ class GroupConsumer(Thread):
         self.map.remove(topic);
         
         tpas = [];
-        for t, chm in self.map.iteritems():
+        for t, chm in self.map.items():
             for p in chm.keys(): tpas.append(TopicPartition(t, p))
 
         self.consumer.assign(tpas);

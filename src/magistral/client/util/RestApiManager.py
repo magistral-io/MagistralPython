@@ -8,7 +8,6 @@ import requests
 import logging
 from magistral.client.MagistralException import MagistralException
 # from magistral.client.MagistralExceptionType import MagistralExceptionType
-# from requests.models import Request
 
 class RestApiManager:        
    
