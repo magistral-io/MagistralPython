@@ -5,13 +5,16 @@ Created on 13 Aug 2016
 
 class Message(object):
 
-    __topic = None;
-    __channel = -1;
-    __body = None;
-    __index = None;
-    __timestamp = 0;
-
-    def __init__(self, topic, channel, payload, index, timestamp):
+    def __init__(self, topic, channel, payload, index = 0, timestamp = 0):
+        
+        assert topic is not None, 'Topic is required'
+        assert channel is not None, 'Channel is required' 
+        assert payload is not None, 'Topic is required'
+        
+        assert isinstance(topic, str),' Topic must be type of str'
+        assert isinstance(channel, int),' Topic must be type of int'
+        assert isinstance(payload, bytes),' Topic must be type of bytes'
+        
         self.__topic = topic;
         self.__channel = channel;
         self.__body = payload;

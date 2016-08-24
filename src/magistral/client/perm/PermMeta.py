@@ -6,23 +6,26 @@ Created on 10 Aug 2016
 class PermMeta():
     
     def __init__(self, topic, perms):
-        self._topic = topic;
-        self._perms = perms;
+        assert topic is not None, 'Topic name required'
+        assert isinstance(topic, str), 'Topic name must be type of str'
+        
+        self._topic = topic
+        self._perms = perms
         
     def topic(self):
-        return self._topic;
+        return self._topic
     
     def channels(self):
-        return self._perms.keys();
+        return self._perms.keys()
     
     def readable(self, channel):
         if (self._perms == None or self._perms.has_key(channel) == False): 
-            return False;
+            return False
         else:
             return self._perms[channel][0]
     
     def writable(self, channel):
         if (self._perms == None or self._perms.has_key(channel) == False): 
-            return False;
+            return False
         else:
             return self._perms[channel][1]

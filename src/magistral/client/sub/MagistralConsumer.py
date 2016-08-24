@@ -9,22 +9,16 @@ from magistral.Message import Message
 from magistral.client.MagistralException import MagistralException
 
 class MagistralConsumer(object):
-
-    __pubKey = None
-    __subKey = None
-    __secretKey = None
-    __bootstrap = None
-    __cipher = None
     
     __HISTORY_DATA_FETCH_SIZE_LIMIT = 10000;
 
     def __init__(self, pubKey, subKey, secretKey, bootstrap, cipher = None):
-        self.__pubKey = pubKey;
-        self.__subKey = subKey;
-        self.__secretKey = secretKey;
+        self.__pubKey = pubKey
+        self.__subKey = subKey
+        self.__secretKey = secretKey
         
-        self.__bootstrap = bootstrap;
-        if cipher is not None: self.__cipher = cipher;
+        self.__bootstrap = bootstrap
+        if cipher is not None: self.__cipher = cipher
     
     def history(self, topic, channel, records):
         

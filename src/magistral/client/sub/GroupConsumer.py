@@ -15,12 +15,7 @@ from magistral.Message import Message
 class GroupConsumer(Thread):
         
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    
-    __consumer = None;
-    __configs = {}    
-    
-    __isAlive = True;
+    logger.setLevel(logging.INFO) 
     
     def __init__(self, sKey, bootstrapServers, groupId, permissions, cipher = None):
         
@@ -28,12 +23,17 @@ class GroupConsumer(Thread):
         
         self.group = groupId;
         self.subKey = sKey;
+        
+        self.cipher = None if cipher is None else cipher;
                 
         configs = Configs.consumerConfigs();
         configs["bootstrap_servers"] = bootstrapServers;
         configs["group_id"] = groupId;
         configs['enable_auto_commit'] = False;
         
+        self.__isAlive = True;
+        
+        self.__configs = {}
         self.__configs.update(configs);
         
         self.__consumer = KafkaConsumer(bootstrap_servers = bootstrapServers, enable_auto_commit = False, group_id = groupId);
@@ -41,7 +41,7 @@ class GroupConsumer(Thread):
         self.permissions = permissions;
         self.map = {}
         
-    __offsets = {}
+        self.__offsets = {}
 
     def run(self):
         
@@ -72,10 +72,11 @@ class GroupConsumer(Thread):
                     shifts = True;
                         
                     self.__consumer.seek(x, offset + 1);
+                    
 #               FETCH DATA
                 
                 if shifts == False:
-                    time.sleep(0.2);
+                    time.sleep(0.5);
                     continue;
                 
                 def recordsTotally(data):
@@ -84,32 +85,41 @@ class GroupConsumer(Thread):
                         if len(val) > 0: size = size + len(val);                        
                     return size;
                 
-                data = self.__consumer.poll(2000);
+                data = self.__consumer.poll(1024);
                 
-                def consumerRecord2Message(record):        
-                    msg = Message(record[0], record[1], record[6], record[2], record[3]);
-                    return msg;
+                def consumerRecord2Message(record):                    
+                    payload = record[6]
+                                        
+                    if self.cipher is not None:
+                        try:
+                            payload = self.cipher.decrypt(payload)
+                        except:
+                            pass
+                                        
+                    msg = Message(record[0], record[1], payload, record[2], record[3])
+                    return msg
                 
                 while recordsTotally(data) > 0:
                     
                     for x, values in data.items():
                         
                         highest = self.__offsets[x];
+                    
                         for value in values:
                             msg = consumerRecord2Message(value);
                                                         
                             if x in self.__offsets and msg.index() > highest:
                                 listener = self.map[msg.topic()][msg.channel()];
+                                
                                 listener(msg);
                                 highest = msg.index();
                             
-                        self.__offsets[x] = highest;
-                            
+                        self.__offsets[x] = highest;                            
                     
                     self.__consumer.commit_async({x, self.__offsets[x]});
                     
                     self.__consumer.seek(x, self.__offsets[x]);
-                    data = self.__consumer.poll(256);        
+                    data = self.__consumer.poll(200);        
                     
             except:
                 pass
@@ -119,10 +129,7 @@ class GroupConsumer(Thread):
 
     def subscribe(self, topic, channel = -1, listener = None, callback = None):
         
-        if (channel == None or isinstance(channel, int) == False):
-            self.logger.error("Channel expected as int argument");
-            raise ValueError("Channels expected as int argument");
-        
+        assert channel is not None and isinstance(channel, int), "Channel expected as int argument"        
         if (channel < -1): channel = -1;
                 
         etopic = self.subKey + "." + topic;

@@ -24,19 +24,18 @@ from magistral.client.pub.PubMeta import PubMeta
 from magistral.client.IHistory import IHistory
 
 from magistral.client.sub.MagistralConsumer import MagistralConsumer
+from magistral.client.util.aes import AESCipher
 
 class Magistral(IMagistral, IAccessControl, IHistory):
 
     logger = logging.getLogger(__name__);
     
     __host = "app.magistral.io"
-    __mqtt = None;
-    
-    
     
     def __init__(self, pubKey, subKey, secretKey, ssl = False, cipher = None):
         
         assert pubKey is not None and subKey is not None and secretKey is not None, 'Publish, Subscribe and Secret key must be specified' 
+        assert isinstance(pubKey, str) and isinstance(subKey, str) and isinstance(secretKey, str), 'Publish, Subscribe and Secret key must be type of str'
         
         pk_regex = re.compile('^pub-[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
         sk_regex = re.compile('^sub-[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
@@ -46,12 +45,20 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         assert sk_regex.match(subKey), 'Invalid format of subscribe key'
         assert ak_regex.match(secretKey), 'Invalid format of secret key'
                 
-        self.pubKey = pubKey;
-        self.subKey = subKey;
-        self.secretKey = secretKey;
+        self.pubKey = pubKey
+        self.subKey = subKey
+        self.secretKey = secretKey
         
-        self.cipher = cipher;
-        self.ssl = False;
+        if cipher is not None:
+            assert isinstance(cipher, str), 'Cipher expected as string'
+            assert len(cipher), 'Minimal length of cipher key is 16 symbols'
+            
+            if len(cipher) > 16: cipher = cipher[:15]            
+            self.cipher = AESCipher(cipher); 
+        else:
+            self.cipher = None
+        
+        self.ssl = False
         
         self.__consumerMap = {}
         self.__producerMap = {}
@@ -208,6 +215,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
     def subscribe(self, topic, group="default", channel=-1, listener=None, callback=None):
         
+        assert isinstance(topic, str), 'Topic must be type of str'
+        assert isinstance(channel, int), 'Channel must be type of int'
+        
         try :
             if group == None: group = "default"; 
             
@@ -241,17 +251,17 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     for asgm in assignment:
                         if (asgm[0] != self.subKey + "." + topic): continue;
                         try:
-                            meta = SubMeta(group, topic, [channel], bs);
+                            meta = SubMeta(group, topic, channel, bs);
                             if (callback != None): callback(meta);
 #                             return meta;
                         except:
                             self.logger.error("ERROR = %s", sys.exc_info()[1]);
                         break;
                 
-                meta = gc.subscribe(topic, channel, listener, lambda assignment : asgCallback(assignment));
-                gc.start();
+                gc.subscribe(topic, channel, listener, lambda assignment : asgCallback(assignment))
+                gc.start()
                 
-                return meta;
+                return SubMeta(group, topic, channel)
                  
         except:
             pass
@@ -273,6 +283,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         assert(topic is not None), 'Topic is required'
         assert(msg is not None and isinstance(msg, bytes)), 'Message body is required an an non-empty bytearray'
+        
+        if self.cipher is not None: # encrypt
+            msg = self.cipher.encrypt(msg); # AES/ECB + Base64 encrypted string 
         
         try:            
             if topic == None:
@@ -318,17 +331,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             self.logger.error("Error [%s] : %s", ex[0], ex[1])            
             raise MagistralException(ex[1]);
 
-    def topics(self, callback=None):
-            
+    def topics(self, callback=None):            
         perms = self.permissions();
         
         metaList = [];            
-        for pm in perms:
-            t = pm.topic
-            chs = list(pm.channels())
-            
-            meta = TopicMeta(t, chs)
-            
+        for pm in perms:            
+            meta = TopicMeta(pm.topic(), list(pm.channels()))            
             metaList.append(meta);
             
         if callback != None: callback(metaList);            
@@ -340,11 +348,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         assert topic is not None, 'Topic name required'
         
         perms = self.permissions(topic);
+        if perms is None: return None
                     
         metaList = None;            
         for pm in perms: 
             metaList = TopicMeta(pm.topic, pm.channels());
-            
+                        
         if callback is not None: callback(metaList);                      
         return metaList;
                 
