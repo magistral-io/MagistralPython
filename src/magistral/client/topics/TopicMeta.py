@@ -5,16 +5,13 @@ Created on 12 Aug 2016
 '''
 
 class TopicMeta(object):
-    
-    __topicName = None;
-    __channels = [];
 
     def __init__(self, topic, channels):
-        self.__topicName = topic;
-        self.__channels.extend(channels)
+        self.__topicName = topic
+        self.__channels = channels
 
     def topic(self):
-        return self.__topicName;
+        return self.__topicName
     
     def channels(self):
-        return self.__channels;
+        return self.__channels

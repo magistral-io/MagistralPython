@@ -32,9 +32,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
     __host = "app.magistral.io"
     __mqtt = None;
     
-    __consumerMap = {}
-    __producerMap = {}
-    __permissions = None
+    
     
     def __init__(self, pubKey, subKey, secretKey, ssl = False, cipher = None):
         
@@ -54,15 +52,13 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         self.cipher = cipher;
         self.ssl = False;
-               
-        self.__connectionSettings()
         
-        def permCallback(perms):
-            if (perms != None):
-                if self.__permissions is None: self.__permissions = []
-                self.__permissions.extend(perms)
-            
-        self.permissions(None, lambda perms : permCallback(perms));
+        self.__consumerMap = {}
+        self.__producerMap = {}
+        self.__permissions = None
+               
+        self.__connectionSettings()            
+        self.permissions();
         
     def setHost(self, host):
         assert host is not None, 'Host name required'
@@ -133,7 +129,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             json = RestApiManager.get(url, params, auth, self.secretKey); # , lambda json, err: permsRestCallback(json, err)
             perms = JsonConverter.userPermissions(json);
             
-            self.__permissions = perms;
+            self.__permissions = [];
+            self.__permissions.extend(perms);
            
             if (callback is not None): callback(self.__permissions);        
             return self.__permissions;
@@ -149,8 +146,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     return [perm];
                  
                 if (callback is not None): callback(None);        
-                return None;   
-                    
+                return None;
                     
 
     def grant(self, user, topic, read, write, ttl=0, channel=-1, callback=None):
@@ -327,10 +323,15 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         perms = self.permissions();
         
         metaList = [];            
-        for pm in perms: 
-            metaList.append(TopicMeta(pm.topic, pm.channels()));
+        for pm in perms:
+            t = pm.topic
+            chs = list(pm.channels())
             
-        if callback != None: callback(metaList, None);            
+            meta = TopicMeta(t, chs)
+            
+            metaList.append(meta);
+            
+        if callback != None: callback(metaList);            
         return metaList;
      
 

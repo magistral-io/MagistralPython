@@ -4,18 +4,12 @@ Created on 11 Aug 2016
 '''
 
 class SubMeta(object):
-        
-    __group = None;
-    __topic = None;
-    __endPoints = [];
-    __channel = None;
     
     def __init__(self, group, topic, channel, endPoints = None):
-        self.__group = group;
-        self.__topic = topic;
-        if (endPoints != None): self.__endPoints.append(endPoints);
+        self.__group = group
+        self.__topic = topic        
+        self.__endPoints = endPoints
         self.__channel = channel;
-        pass;
     
     def group(self):
         return self.__group;

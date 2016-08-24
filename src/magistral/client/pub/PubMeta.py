@@ -6,10 +6,6 @@ Created on 13 Aug 2016
 import time
 
 class PubMeta(object):
-    
-    __topic = None
-    __timestamp = 0;
-    __channel = -1;
 
     def __init__(self, topic, channel, timestamp = int(round(time.time() * 1000))):
         self.__topic = topic;
