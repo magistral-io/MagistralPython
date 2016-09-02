@@ -246,22 +246,28 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             
             for bs, gc in self.__consumerMap[group].items():
                 
-                def asgCallback(assignment):
+                def asgCallback(assignment, triggerCallbacks = False):
+                    
+                    meta = None;
                     
                     for asgm in assignment:
                         if (asgm[0] != self.subKey + "." + topic): continue;
+                        
                         try:
-                            meta = SubMeta(group, topic, channel, bs);
-                            if (callback != None): callback(meta);
-#                             return meta;
+                            meta = SubMeta(group, topic, asgm[1], bs);
+                            if (triggerCallbacks == True and callback != None): callback(meta, None);
+                            return meta;
                         except:
                             self.logger.error("ERROR = %s", sys.exc_info()[1]);
+                            if (triggerCallbacks == True and callback != None): callback(None, sys.exc_info()[1]);
+                            return None;
                         break;
                 
-                gc.subscribe(topic, channel, listener, lambda assignment : asgCallback(assignment))
+                asgn = gc.subscribe(topic, channel, listener, lambda assignment : asgCallback(assignment, True))
                 gc.start()
                 
-                return SubMeta(group, topic, channel)
+                res = asgCallback(asgn, False)                
+                return res;
                  
         except:
             pass

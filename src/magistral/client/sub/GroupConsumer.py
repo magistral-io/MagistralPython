@@ -173,7 +173,9 @@ class GroupConsumer(Thread):
         for key, val in self.__configs.items():
             self.__consumer.config[key] = val;
                 
-        if callback is not None : callback(self.__consumer.assignment());
+        if callback is not None: 
+            callback(self.__consumer.assignment());
+            
         return self.__consumer.assignment();
         
         
