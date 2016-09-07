@@ -306,8 +306,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                 channel = -1;
             
             chs = topicMeta.channels();
-            if (channel >= len(chs)):
-                raise MagistralException("There is no channel [" + channel + "] for topic " + topic);
+            if (channel not in chs):
+                raise MagistralException("There is no channel [" + channel + "] available for topic " + topic);
             
             if self.__producerMap == None or len(self.__producerMap) == 0:
                 raise MagistralException("Unable to publish message -> Client is not connected to the Service");
@@ -358,7 +358,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     
         metaList = None;            
         for pm in perms: 
-            metaList = TopicMeta(pm.topic, pm.channels());
+            metaList = TopicMeta(pm.topic(), pm.channels());
                         
         if callback is not None: callback(metaList);                      
         return metaList;

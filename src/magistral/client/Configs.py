@@ -35,7 +35,7 @@ class Configs:
         consumer = {}
         consumer["enable_auto_commit"] = False;        
         consumer["session_timeout_ms"] = 30000       
-        consumer["fetch_min_bytes"] = 64
+        consumer["fetch_min_bytes"] = 512
         consumer["fetch_wait_max_ms"] = 128        
         consumer["max_partition_fetch_bytes"] = 262144
         
