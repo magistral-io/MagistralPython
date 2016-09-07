@@ -84,7 +84,7 @@ class JsonConverter(object):
             for ch in channels:
                 permissions[int(ch)] = (read, write)                     
         else:
-            permissions[int(ch)] = (read, write)
+            permissions[int(channels)] = (read, write)
         
         return permissions;
     
