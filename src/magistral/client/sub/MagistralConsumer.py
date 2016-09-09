@@ -24,12 +24,8 @@ class MagistralConsumer(object):
         
         messages = []
         
-        consumer = KafkaConsumer(bootstrap_servers = self.__bootstrap);
-        
-        consumer.config['enable_auto_commit'] = False;
-        consumer.config['session_timeout_ms'] = 30000;
-        consumer.config['fetch_min_bytes'] = 32;
-        consumer.config['max_partition_fetch_bytes'] = 65536; 
+        consumer = KafkaConsumer(bootstrap_servers = self.__bootstrap,
+            enable_auto_commit = False, session_timeout_ms = 30000, fetch_min_bytes = 32, max_partition_fetch_bytes = 65536);
         
         if (records > self.__HISTORY_DATA_FETCH_SIZE_LIMIT): records = self.__HISTORY_DATA_FETCH_SIZE_LIMIT;
         
@@ -43,10 +39,13 @@ class MagistralConsumer(object):
         pos = last - records if last > records else 0;
         consumer.seek(x, pos);
         
-        data = consumer.poll(128);   
+        data = consumer.poll(256);   
         
         endIsNotReached = True;
         while endIsNotReached:
+            
+            if len(data.values()) == 0:
+                return messages;
             
             records = list(data.values())
             
@@ -63,7 +62,7 @@ class MagistralConsumer(object):
             
             pos = pos + len(messages)
             consumer.seek(x, pos);
-            data = consumer.poll(128);
+            data = consumer.poll(256);
             
         consumer.close();
         

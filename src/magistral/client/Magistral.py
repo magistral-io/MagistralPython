@@ -240,8 +240,11 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     
                     bs = setting["bootstrap_servers"]
                     if (bs in cm): continue;
+                         
+                    threadId = 'thread_id_consumer_' + group
+                    name = 'thread_name_consumer_' + group
                     
-                    c = GroupConsumer(self.subKey, bs, group, self.__permissions, self.cipher);
+                    c = GroupConsumer(threadId, name, self.subKey, bs, group, self.__permissions, self.cipher);
                     self.__consumerMap[group][bs] = c;
             
             for bs, gc in self.__consumerMap[group].items():
@@ -264,7 +267,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                         break;
                 
                 asgn = gc.subscribe(topic, channel, listener, lambda assignment : asgCallback(assignment, True))
-                gc.start()
+                gc.start();
                 
                 res = asgCallback(asgn, False)                
                 return res;
@@ -307,7 +310,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             
             chs = topicMeta.channels();
             if (channel not in chs):
-                raise MagistralException("There is no channel [" + channel + "] available for topic " + topic);
+                raise MagistralException("There is no channel [" + str(channel) + "] available for topic " + topic);
             
             if self.__producerMap == None or len(self.__producerMap) == 0:
                 raise MagistralException("Unable to publish message -> Client is not connected to the Service");
@@ -363,7 +366,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         if callback is not None: callback(metaList);                      
         return metaList;
                 
-    def history(self, topic, channel, count, start = 0, callback=None):
+    def history(self, topic, channel, count, start = -1, callback=None):
         
         assert topic is not None, 'Topic name required'
         assert channel is not None and isinstance(channel, int), 'Channel number required as int parameter'
@@ -375,7 +378,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None);
         
         res = []
-        if start > 0:
+        if start < 0:
             res.extend(mc.history(topic, channel, count));
         else:
             res.extend(mc.historyForTimePeriod(topic, channel, start, end = int(round(time.time() * 1000)), limit = count));
@@ -398,9 +401,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         else: 
             return None;
 
-    def close(self):        
+    def close(self):
+        print('CLOSED')        
         for bsmap in self.__consumerMap.values():
-            for c in bsmap.values(): c.close;  
+            for c in bsmap.values(): c.close();  
                   
-        self.__mqtt.disconnect();        
+        self.__mqtt.disconnect(); 
+        
+        sys.exit(0)       
         

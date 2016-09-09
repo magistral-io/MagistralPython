@@ -33,12 +33,13 @@ class Configs:
     @staticmethod   
     def consumerConfigs():
         consumer = {}
-        consumer["enable_auto_commit"] = False;        
+        consumer["enable_auto_commit"] = False;
+        consumer["check_crcs"] = False;
+        consumer["exclude_internal_topics"] = True;
         consumer["session_timeout_ms"] = 30000       
-        consumer["fetch_min_bytes"] = 512
-        consumer["fetch_wait_max_ms"] = 128        
-        consumer["max_partition_fetch_bytes"] = 262144
-        
+        consumer["fetch_min_bytes"] = 8
+        consumer["fetch_wait_max_ms"] = 256
+        consumer["max_in_flight_requests_per_connection"] = 4
         consumer["buffer_memory"] = 33554432
         consumer["key_serializer"] = None
         consumer["value_serializer"] = None
