@@ -68,6 +68,11 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         self.permissions();
         
     def setHost(self, host):
+        """
+        Sets host name of coordinating node [dedicated deployments]
+        :param host: string URL of the host
+        """    
+        assert host is not None, 'Host name required'
         assert host is not None, 'Host name required'
         self.__host = host;
         
@@ -125,6 +130,14 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
     def permissions(self, topic=None, callback=None):
         
+        """ Retrieves user permissions
+
+        :param topic: (optional) Topic name to get permissions for
+        :param callback: (optional) callback with permissions -> array of :class:`PermMeta`.
+        
+        :return: :class: array of :class:`PermMeta`
+        """
+        
         if self.__permissions is None:
             url = "https://" + self.__host + "/api/magistral/net/permissions"
             
@@ -158,6 +171,21 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
     def grant(self, user, topic, read, write, ttl=0, channel=-1, callback=None):
         
+        """ Grants permanent or temporary permissions to access network resources
+        
+        :param user: (str) user name
+        :param topic: (str) topic name
+        :param read: (bool) permission to read from channel(s)
+        :param write: (bool) permission to write to channel(s)
+        
+        :param ttl: (int) (optional) Time-to-Live for permission [0 - is permanent, > 0 - are temporary]
+        :param channel: (int) (optional) Number of channel permission should be granted for [ -1 - to all in the topic, >=0 - number of specific channel]
+       
+        :param callback: (optional) callback with up-to-date permissions -> array of :class:`PermMeta`.
+        
+        :return: :class: array of :class:`PermMeta`
+        """
+        
         assert user is not None, 'User name is required'
         assert topic is not None, 'Topic is required'
         
@@ -189,6 +217,18 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
     def revoke(self, user, topic, channel=-1, callback=None):
         
+        """ Revokes user permission
+        
+        :param user: (str) user name
+        :param topic: (str) topic name
+
+        :param channel: (int) (optional) Number of channel for revocation [ -1 - from all in the topic, >=0 - number of specific channel]
+       
+        :param callback: (optional) callback with up-to-date permissions -> array of :class:`PermMeta`.
+        
+        :return: :class: array of :class:`PermMeta`
+        """
+        
         assert user is not None, 'User name is required'
         assert topic is not None, 'Topic is required'
                 
@@ -214,6 +254,18 @@ class Magistral(IMagistral, IAccessControl, IHistory):
 
 
     def subscribe(self, topic, group="default", channel=-1, listener=None, callback=None):
+        
+        """ Subscribes to topic / channel
+        
+        :param topic: (str) topic name
+        :param group: (str) group name
+        
+        :param channel: (int) (optional) Number of channel to subscribe [ -1 - to all in the topic, >=0 - number of specific channel]
+       
+        :param callback: (optional) callback with subscription ack -> :class:`SubMeta`.
+        
+        :return: :class: `SubMeta`
+        """
         
         assert isinstance(topic, str), 'Topic must be type of str'
         assert isinstance(channel, int), 'Channel must be type of int'
@@ -275,7 +327,19 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         except:
             pass
 
-    def unsubscribe(self, topic, channel=-1, callback=None):        
+    def unsubscribe(self, topic, channel=-1, callback=None): 
+        
+        """ Unsubscribes from topic / channel
+        
+        :param topic: (str) topic name
+        
+        :param channel: (int) (optional) Number of channel to unsubscribe from [ -1 - to all in the topic, >=0 - number of specific channel]
+       
+        :param callback: (optional) callback with unsubscription ack -> :class:`SubMeta`.
+        
+        :return: :class: `SubMeta`
+        """
+               
         for groupName, consmap in self.__consumerMap.items():
             for conString, gc in consmap.items():
                 gc.unsubscribe(self.subKey + "." + topic);
@@ -289,6 +353,18 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         return PubMeta(meta[0], int(meta[1]), meta[4])
 
     def publish(self, topic, msg, channel=-1, callback=None):
+        
+        """ Send messages to topic / channel(s)
+        
+        :param topic: (str) topic name
+        :param msg: (bytes) message content
+        
+        :param channel: (int) (optional) Number of channel to send message to [ -1 - to all in the topic, >=0 - number of specific channel]
+       
+        :param callback: (optional) callback with publish ack -> :class:`PubMeta`.
+        
+        :return: :class: `PubMeta`
+        """
         
         assert(topic is not None), 'Topic is required'
         assert(msg is not None and isinstance(msg, bytes)), 'Message body is required an an non-empty bytearray'
@@ -340,7 +416,13 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             self.logger.error("Error [%s] : %s", ex[0], ex[1])            
             raise MagistralException(ex[1]);
 
-    def topics(self, callback=None):            
+    def topics(self, callback=None):  
+        
+        """ Returns information about available topics / channels for user
+        
+        :return: array of :class:`TopicMeta`
+        """
+                  
         perms = self.permissions();
         
         metaList = [];            
@@ -353,6 +435,13 @@ class Magistral(IMagistral, IAccessControl, IHistory):
      
 
     def topic(self, topic, callback = None):
+        
+        """ Returns information about topic available for user
+        
+        :param topic: (str) topic name
+         
+        :return: array of :class:`TopicMeta`
+        """
         
         assert topic is not None, 'Topic name required'
         
@@ -367,6 +456,18 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         return metaList;
                 
     def history(self, topic, channel, count, start = -1, callback=None):
+        
+        """ Returns last messages sent over channel 
+        
+        :param topic: (str) topic name
+        :param channel: (int) channel number
+        :param count: (int) quantity of messages to return
+        
+        :param start: (optional) start point of epoch to fetch messages from
+        :param callback: (optional) callback with array of :class:`Message`
+         
+        :return: array of :class:`Message`
+        """
         
         assert topic is not None, 'Topic name required'
         assert channel is not None and isinstance(channel, int), 'Channel number required as int parameter'
@@ -388,6 +489,19 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             
     def historyIn(self, topic, channel, start=0, end=int(round(time.time() * 1000)), callback=None):
         
+        """ Returns sent messages within time interval 
+        
+        :param topic: (str) topic name
+        :param channel: (int) channel number
+       
+        :param start: (optional) start of epoch
+        :param end: (optional) end of epoch
+
+        :param callback: (optional) callback with array of :class:`Message`
+         
+        :return: array of :class:`Message`
+        """
+        
         assert topic is not None, 'Topic name required'
         assert channel is not None and isinstance(channel, int), 'Channel number required as int parameter'
         
@@ -402,11 +516,13 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             return None;
 
     def close(self):
-        print('CLOSED')        
+        
+        """
+        Terminates all network activity.
+        Magistral should be re-instantiated after this
+        """
+        
         for bsmap in self.__consumerMap.values():
             for c in bsmap.values(): c.close();  
                   
-        self.__mqtt.disconnect(); 
-        
-        sys.exit(0)       
-        
+        self.__mqtt.disconnect();        
