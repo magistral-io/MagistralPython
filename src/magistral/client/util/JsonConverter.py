@@ -65,6 +65,11 @@ class JsonConverter(object):
                 token = entry["token"] 
                 settings["meta"] = { "token" : entry["token"] }
           
+            if entry["ts"] != None:
+                settings["ts"] = entry["ts"]
+                
+            if entry["ks"] != None:
+                settings["ks"] = entry["ks"]
         
         settings["pub"] = pub;
         settings["sub"] = sub;        

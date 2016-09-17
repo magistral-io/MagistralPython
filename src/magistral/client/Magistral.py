@@ -5,9 +5,14 @@ Created on 9 Aug 2016
 
 import re
 import sys
+import jks
 import time
+import base64
 import logging
 import paho.mqtt.client as mqtt
+from magistral.client.util.JksHandler import JksHandler
+
+from os.path import expanduser
 
 from magistral.client.IAccessControl import IAccessControl
 from magistral.client.IMagistral import IMagistral
@@ -26,13 +31,15 @@ from magistral.client.IHistory import IHistory
 from magistral.client.sub.MagistralConsumer import MagistralConsumer
 from magistral.client.util.aes import AESCipher
 
+
 class Magistral(IMagistral, IAccessControl, IHistory):
 
     logger = logging.getLogger(__name__);
+    logger.setLevel(logging.INFO)
     
     __host = "app.magistral.io"
     
-    def __init__(self, pubKey, subKey, secretKey, ssl = False, cipher = None):
+    def __init__(self, pubKey, subKey, secretKey, cipher = None):
         
         assert pubKey is not None and subKey is not None and secretKey is not None, 'Publish, Subscribe and Secret key must be specified' 
         assert isinstance(pubKey, str) and isinstance(subKey, str) and isinstance(secretKey, str), 'Publish, Subscribe and Secret key must be type of str'
@@ -58,7 +65,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         else:
             self.cipher = None
         
-        self.ssl = False
+        self.ssl = True
         
         self.__consumerMap = {}
         self.__producerMap = {}
@@ -76,21 +83,55 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         assert host is not None, 'Host name required'
         self.__host = host;
         
+    
+    def __doCerts(self, sts, sks):
+        
+        home = expanduser("~")
+        
+        with open(home + '/magistral/ts', 'wb') as f:
+            f.seek(0)
+            f.write(bytearray(base64.standard_b64decode(sts)))
+            f.close()
+    
+        with open(home + '/magistral/ks', 'wb') as f:
+            f.seek(0)
+            f.write(bytearray(base64.standard_b64decode(sks)))                    
+            f.close()           
+                           
+        ks = jks.KeyStore.load(home + '/magistral/ks', 'magistral')
+            
+        self.uid = JksHandler.writePkAndCerts(ks)
+        
     def __connectionSettings(self):
         
         url = "https://" + self.__host + "/api/magistral/net/connectionPoints";
         user = self.pubKey + "|" + self.subKey;
+        
+        home = expanduser("~")
 #         
         def conPointsCallback(json, err):
             if (err != None):
                 self.logger.error(err)
                 return
             else:            
-                self.logger.debug("Received Connection Points : %s", json);                
-                self.settings = JsonConverter.connectionSettings(json);
-                                
+                self.logger.debug("Received Connection Points : %s", json)    
+                self.settings = JsonConverter.connectionSettings(json)
+                
+                self.__doCerts(self.settings['ts'], self.settings['ks'])
+                            
                 for setting in (self.settings["pub"]["ssl"] if self.ssl else self.settings["pub"]["plain"]):        
-                    p = KafkaProducer(bootstrap_servers = setting["bootstrap_servers"], partitioner = None);  
+                    p = KafkaProducer(bootstrap_servers = setting["bootstrap_servers"],
+                                    compression_type = setting["compression_type"],
+                                    value_serializer = setting["value_serializer"],
+                                    key_serializer = setting["key_serializer"],
+                                    security_protocol = 'SSL',
+                                    ssl_check_hostname = False,
+                                    ssl_keyfile = home + '/magistral/' + self.uid + '/key.pem',
+                                    ssl_cafile = home + '/magistral/' + self.uid + '/ca.pem',
+                                    ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem', 
+                                    linger_ms = setting["linger_ms"],
+                                    retries = setting["retries"],
+                                    partitioner = None);  
                     
                     self.token = self.settings["meta"]["token"]
                     for key, val in setting.items():
@@ -296,7 +337,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     threadId = 'thread_id_consumer_' + group
                     name = 'thread_name_consumer_' + group
                     
-                    c = GroupConsumer(threadId, name, self.subKey, bs, group, self.__permissions, self.cipher);
+                    c = GroupConsumer(threadId, name, self.subKey, bs, group, self.__permissions, self.cipher, self.uid);
                     self.__consumerMap[group][bs] = c;
             
             for bs, gc in self.__consumerMap[group].items():
@@ -525,4 +566,11 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         for bsmap in self.__consumerMap.values():
             for c in bsmap.values(): c.close();  
                   
-        self.__mqtt.disconnect();        
+        self.__mqtt.disconnect();
+        
+    logging.getLogger('kafka.conn').setLevel(logging.INFO)  
+    logging.getLogger('kafka.client').setLevel(logging.INFO) 
+    logging.getLogger('kafka.coordinator').setLevel(logging.INFO) 
+    logging.getLogger('kafka.metrics.metrics').setLevel(logging.INFO) 
+    logging.getLogger('kafka.producer.kafka').setLevel(logging.INFO)
+    logging.getLogger('kafka.producer.sender').setLevel(logging.INFO)

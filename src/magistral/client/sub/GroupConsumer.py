@@ -3,9 +3,10 @@ Created on 11 Aug 2016
 @author: rizarse
 '''
 
-import time
 import logging
 import threading
+
+from os.path import expanduser
 
 from kafka.consumer.group import KafkaConsumer
 from magistral.client.Configs import Configs
@@ -18,7 +19,7 @@ class GroupConsumer(threading.Thread):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
      
-    def __init__(self, threadId, name, sKey, bootstrapServers, groupId, permissions, cipher = None):
+    def __init__(self, threadId, name, sKey, bootstrapServers, groupId, permissions, cipher = None, uid = None):
         threading.Thread.__init__(self)
         self.threadId = threadId
         self.name = name
@@ -33,18 +34,37 @@ class GroupConsumer(threading.Thread):
         configs["group_id"] = groupId;
         configs['enable_auto_commit'] = False;
         
-        self.__isAlive = True;
+        self.__isAlive = True
         
-        self.__consumer = KafkaConsumer(
-            bootstrap_servers = bootstrapServers,
-            check_crcs = False,
-            exclude_internal_topics = True,
-            session_timeout_ms = 20000,
-            fetch_min_bytes = 128,
-            fetch_max_wait_ms = 256,           
-            enable_auto_commit = False,
-            max_in_flight_requests_per_connection = 10,
-            group_id = groupId);
+        home = expanduser("~")
+        
+        if uid == None:
+            self.__consumer = KafkaConsumer(
+                bootstrap_servers = bootstrapServers,
+                check_crcs = False,
+                exclude_internal_topics = True,
+                session_timeout_ms = 20000,
+                fetch_min_bytes = 128,
+                fetch_max_wait_ms = 256,           
+                enable_auto_commit = False,
+                max_in_flight_requests_per_connection = 10,                
+                group_id = groupId);
+        else:
+            self.__consumer = KafkaConsumer(
+                bootstrap_servers = bootstrapServers,
+                check_crcs = False,
+                exclude_internal_topics = True,
+                session_timeout_ms = 20000,
+                fetch_min_bytes = 128,
+                fetch_max_wait_ms = 256,           
+                enable_auto_commit = False,
+                max_in_flight_requests_per_connection = 10,
+                security_protocol = 'SSL',
+                ssl_check_hostname = False,
+                ssl_keyfile = home + '/magistral/' + uid + '/key.pem',
+                ssl_cafile = home + '/magistral/' + uid + '/ca.pem',
+                ssl_certfile = home + '/magistral/' + uid + '/certificate.pem',
+                group_id = groupId);
         
         self.permissions = permissions;
         self.map = {}
@@ -101,13 +121,7 @@ class GroupConsumer(threading.Thread):
         if (channel < -1): channel = -1;
                 
         etopic = self.subKey + "." + topic;
-        
-        topics = self.__consumer.topics()
-        
-        if (etopic not in topics):
-            self.logger.error("Topic [" + topic + "] does not exist");
-            raise MagistralException("Topic [" + topic + "] does not exist");
-                    
+                           
         self.logger.debug("Subscribe -> %s : %s | key = %s", topic, channel, self.subKey);
         
         if (self.permissions == None or len(self.permissions) == 0): 
@@ -138,7 +152,7 @@ class GroupConsumer(threading.Thread):
             tpas.append(TopicPartition(etopic, ch));
             if (listener is not None): self.map[etopic][ch] = listener;        
         
-        self.__consumer.assign(tpas);
+        self.__consumer.assign(tpas);       
                 
         if callback is not None: 
             callback(self.__consumer.assignment());
@@ -146,19 +160,20 @@ class GroupConsumer(threading.Thread):
         return self.__consumer.assignment();
         
         
-    def unsubscribe(self, topic): 
-        self.consumer.unsubscribe();
-        self.map.remove(topic);
-        
-        tpas = [];
-        for t, chm in self.map.items():
-            for p in chm.keys(): tpas.append(TopicPartition(t, p))
-
-        self.consumer.assign(tpas);
+    def unsubscribe(self, topic):
+        self.consumer.assign([]);
+        self.map.remove(topic);        
 
     def close(self):
         self.__isAlive = False
         self.__consumer.pause()
         self.__consumer.close()
-  
+        
+    logging.getLogger('kafka.conn').setLevel(logging.FATAL)
+    logging.getLogger('kafka.cluster').setLevel(logging.FATAL)
+    logging.getLogger('kafka.consumer.group').setLevel(logging.INFO)    
+    logging.getLogger('kafka.consumer.fetcher').setLevel(logging.INFO)
+    logging.getLogger('kafka.coordinator.consumer').setLevel(logging.INFO)
+    logging.getLogger('kafka.producer.record_accumulator').setLevel(logging.INFO)
+    
 threadLock = threading.Lock()    
