@@ -12,7 +12,7 @@ import logging
 import paho.mqtt.client as mqtt
 from magistral.client.util.JksHandler import JksHandler
 
-from os.path import expanduser
+from os.path import expanduser, os
 
 from magistral.client.IAccessControl import IAccessControl
 from magistral.client.IMagistral import IMagistral
@@ -30,6 +30,7 @@ from magistral.client.IHistory import IHistory
 
 from magistral.client.sub.MagistralConsumer import MagistralConsumer
 from magistral.client.util.aes import AESCipher
+import shutil
 
 
 class Magistral(IMagistral, IAccessControl, IHistory):
@@ -88,19 +89,28 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         home = expanduser("~")
         
-        with open(home + '/magistral/ts', 'wb') as f:
+#         if os.path.exists(home + '/magistral') == False:
+#             os.makedirs(home + '/magistral')
+             
+        if os.path.exists(home + '/magistral/tmp') == False:
+            os.makedirs(home + '/magistral/tmp')
+        
+        with open(home + '/magistral/tmp/ts', 'wb') as f:
             f.seek(0)
             f.write(bytearray(base64.standard_b64decode(sts)))
             f.close()
     
-        with open(home + '/magistral/ks', 'wb') as f:
+        with open(home + '/magistral/tmp/ks', 'wb') as f:
             f.seek(0)
             f.write(bytearray(base64.standard_b64decode(sks)))                    
             f.close()           
                            
-        ks = jks.KeyStore.load(home + '/magistral/ks', 'magistral')
+        ks = jks.KeyStore.load(home + '/magistral/tmp/ks', 'magistral')
             
         self.uid = JksHandler.writePkAndCerts(ks)
+        
+        if os.path.exists(home + '/magistral/tmp'): 
+            shutil.rmtree(home + '/magistral/tmp')
         
     def __connectionSettings(self):
         
