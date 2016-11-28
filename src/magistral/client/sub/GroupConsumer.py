@@ -150,7 +150,11 @@ class GroupConsumer(threading.Thread):
         tpas = [];
         for ch in self.fch:            
             tpas.append(TopicPartition(etopic, ch));
-            if (listener is not None): self.map[etopic][ch] = listener;        
+            if (listener is not None): self.map[etopic][ch] = listener
+            
+            ca = self.__consumer.assignment()
+            if (ca is not None):
+                for tp in ca: tpas.append(tp)
         
         self.__consumer.assign(tpas);       
                 
