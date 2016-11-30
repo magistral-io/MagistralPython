@@ -44,10 +44,11 @@ class GroupConsumer(threading.Thread):
                 check_crcs = False,
                 exclude_internal_topics = True,
                 session_timeout_ms = 20000,
-                fetch_min_bytes = 128,
-                fetch_max_wait_ms = 256,           
+                fetch_min_bytes = 64,
+                fetch_max_wait_ms = 96,           
                 enable_auto_commit = False,
-                max_in_flight_requests_per_connection = 10,                
+                max_in_flight_requests_per_connection = 8,
+                api_version = (0, 10),            
                 group_id = groupId);
         else:
             self.__consumer = KafkaConsumer(
@@ -55,15 +56,16 @@ class GroupConsumer(threading.Thread):
                 check_crcs = False,
                 exclude_internal_topics = True,
                 session_timeout_ms = 20000,
-                fetch_min_bytes = 128,
-                fetch_max_wait_ms = 256,           
+                fetch_min_bytes = 64,
+                fetch_max_wait_ms = 96,           
                 enable_auto_commit = False,
-                max_in_flight_requests_per_connection = 10,
+                max_in_flight_requests_per_connection = 8,
                 security_protocol = 'SSL',
                 ssl_check_hostname = False,
                 ssl_keyfile = home + '/magistral/' + uid + '/key.pem',
                 ssl_cafile = home + '/magistral/' + uid + '/ca.pem',
                 ssl_certfile = home + '/magistral/' + uid + '/certificate.pem',
+                api_version = (0, 10),
                 group_id = groupId);
         
         self.permissions = permissions;
@@ -98,7 +100,7 @@ class GroupConsumer(threading.Thread):
         while self.__isAlive:
             try:
 
-                data = self.__consumer.poll(512);
+                data = self.__consumer.poll(128);
                 for values in data.values():
                                          
                     for value in values:
@@ -106,7 +108,7 @@ class GroupConsumer(threading.Thread):
                         listener = self.map[msg.topic()][msg.channel()];
                         if listener is not None: listener(msg);
                         
-                self.__consumer.commit_async(); 
+                if len(data.values()) > 0: self.__consumer.commit_async(); 
                     
             except:
                 pass

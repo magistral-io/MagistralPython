@@ -141,6 +141,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                                     ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem', 
                                     linger_ms = setting["linger_ms"],
                                     retries = setting["retries"],
+                                    api_version = (0, 10),
                                     partitioner = None);  
                     
                     self.token = self.settings["meta"]["token"]
@@ -459,7 +460,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     if callback is not None: 
                         callback(self.__recordMetadata2PubMeta(ack))
                     
-                ack = future.get(5);
+                ack = future.get();
                 return self.__recordMetadata2PubMeta(ack);
             
         except:
