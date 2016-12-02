@@ -211,15 +211,15 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                 if (callback is not None): callback(self.__permissions);        
                 return self.__permissions;
             else:                
+                permissions = [];
+                
                 for perm in self.__permissions:
-                    if perm.topic() != topic : continue
-                    
-                    if (callback is not None): callback([perm]);        
-                    return [perm];
+                    if perm.topic() != topic : continue                    
+                    permissions.extend([perm]);
                  
-                if (callback is not None): callback(None);        
-                return None;
-                    
+                if (callback is not None): callback(permissions);        
+                return permissions;
+            
 
     def grant(self, user, topic, read, write, ttl=0, channel=-1, callback=None):
         
@@ -499,11 +499,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         perms = self.permissions(topic);
         if perms is None: return None
-                    
-        metaList = None;            
-        for pm in perms: 
-            metaList = TopicMeta(pm.topic(), pm.channels());
-                        
+        
+        channels = []            
+        for pm in perms:
+            channels.extend(pm.channels())
+        
+        metaList = TopicMeta(pm.topic(), channels);
         if callback is not None: callback(metaList);                      
         return metaList;
                 
