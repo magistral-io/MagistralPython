@@ -142,7 +142,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                                     linger_ms = setting["linger_ms"],
                                     retries = setting["retries"],
                                     api_version = (0, 10),
-                                    partitioner = None);  
+                                    partitioner = None,
+                                    acks = 0);  
                     
                     self.token = self.settings["meta"]["token"]
                     for key, val in setting.items():
