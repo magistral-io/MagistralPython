@@ -505,7 +505,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         for pm in perms:
             channels.extend(pm.channels())
         
-        metaList = TopicMeta(pm.topic(), channels);
+        metaList = TopicMeta(topic, channels);
         if callback is not None: callback(metaList);                      
         return metaList;
                 
