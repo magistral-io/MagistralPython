@@ -30,7 +30,7 @@ class GroupConsumer(threading.Thread):
         self.cipher = None if cipher is None else cipher;
                 
         configs = Configs.consumerConfigs();
-        configs["bootstrap_servers"] = bootstrapServers;
+        configs["bootstrap_servers"] = bootstrapServers.split(',');
         configs["group_id"] = groupId;
         configs['enable_auto_commit'] = False;
         
@@ -40,32 +40,38 @@ class GroupConsumer(threading.Thread):
         
         if uid == None:
             self.__consumer = KafkaConsumer(
-                bootstrap_servers = bootstrapServers,
+                bootstrap_servers = configs["bootstrap_servers"],
                 check_crcs = False,
                 exclude_internal_topics = True,
-                session_timeout_ms = 20000,
+                session_timeout_ms = 10000,
+                reconnect_backoff_ms = 10000,
+                heartbeat_interval_ms = 2000,
+                retry_backoff_ms = 500,
                 fetch_min_bytes = 64,
                 fetch_max_wait_ms = 96,           
                 enable_auto_commit = False,
-                max_in_flight_requests_per_connection = 8,
-                api_version = (0, 10),            
+                max_in_flight_requests_per_connection = 4,
+#                 api_version = (0, 10),            
                 group_id = groupId);
         else:
             self.__consumer = KafkaConsumer(
-                bootstrap_servers = bootstrapServers,
+                bootstrap_servers = configs["bootstrap_servers"],
                 check_crcs = False,
                 exclude_internal_topics = True,
-                session_timeout_ms = 20000,
+                session_timeout_ms = 10000,
+                reconnect_backoff_ms = 10000,
+                heartbeat_interval_ms = 2000,
+                retry_backoff_ms = 500,
                 fetch_min_bytes = 64,
                 fetch_max_wait_ms = 96,           
                 enable_auto_commit = False,
-                max_in_flight_requests_per_connection = 8,
+                max_in_flight_requests_per_connection = 4,
                 security_protocol = 'SSL',
                 ssl_check_hostname = False,
                 ssl_keyfile = home + '/magistral/' + uid + '/key.pem',
                 ssl_cafile = home + '/magistral/' + uid + '/ca.pem',
                 ssl_certfile = home + '/magistral/' + uid + '/certificate.pem',
-                api_version = (0, 10),
+#                 api_version = (0, 10),
                 group_id = groupId);
         
         self.permissions = permissions;
