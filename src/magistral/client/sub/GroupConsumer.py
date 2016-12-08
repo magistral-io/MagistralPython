@@ -101,12 +101,12 @@ class GroupConsumer(threading.Thread):
 
     def run(self):
         
-        threadLock.acquire()
+        threadLock.acquire(False)
         
         while self.__isAlive:
             try:
 
-                data = self.__consumer.poll(128);
+                data = self.__consumer.poll(512);
                 for values in data.values():
                                          
                     for value in values:
