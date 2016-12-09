@@ -28,6 +28,7 @@ class Producer(threading.Thread):
                                     ssl_certfile = home + '/magistral/' + uid + '/certificate.pem', 
                                     linger_ms = setting["linger_ms"],
                                     retries = setting["retries"],
+                                    reconnect_backoff_ms = 1000,
                                     api_version = (0, 10),
                                     partitioner = None,
                                     acks = 0);  
