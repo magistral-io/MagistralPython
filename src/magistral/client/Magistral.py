@@ -23,7 +23,6 @@ from magistral.client.sub.SubMeta import SubMeta
 from magistral.client.topics.TopicMeta import TopicMeta
 from magistral.client.MagistralException import MagistralException
 
-from kafka.producer.kafka import KafkaProducer
 from kafka.producer.future import RecordMetadata
 from magistral.client.pub.PubMeta import PubMeta
 from magistral.client.IHistory import IHistory
@@ -31,6 +30,7 @@ from magistral.client.IHistory import IHistory
 from magistral.client.sub.MagistralConsumer import MagistralConsumer
 from magistral.client.util.aes import AESCipher
 import shutil
+from magistral.client.pub.Producer import Producer
 
 
 class Magistral(IMagistral, IAccessControl, IHistory):
@@ -116,8 +116,6 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         url = "https://" + self.__host + "/api/magistral/net/connectionPoints";
         user = self.pubKey + "|" + self.subKey;
-        
-        home = expanduser("~")
 #         
         def conPointsCallback(json, err):
             if (err != None):
@@ -129,37 +127,21 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                 
                 self.__doCerts(self.settings['ts'], self.settings['ks'])
                             
-                for setting in (self.settings["pub"]["ssl"] if self.ssl else self.settings["pub"]["plain"]):        
-                    p = KafkaProducer(bootstrap_servers = setting["bootstrap_servers"],
-                                    compression_type = setting["compression_type"],
-                                    value_serializer = setting["value_serializer"],
-                                    key_serializer = setting["key_serializer"],
-                                    security_protocol = 'SSL',
-                                    ssl_check_hostname = False,
-                                    ssl_keyfile = home + '/magistral/' + self.uid + '/key.pem',
-                                    ssl_cafile = home + '/magistral/' + self.uid + '/ca.pem',
-                                    ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem', 
-                                    linger_ms = setting["linger_ms"],
-                                    retries = setting["retries"],
-                                    api_version = (0, 10),
-                                    partitioner = None,
-                                    acks = 0);  
+                for setting in (self.settings["pub"]["ssl"] if self.ssl else self.settings["pub"]["plain"]):
                     
-                    self.token = self.settings["meta"]["token"]
-                    for key, val in setting.items():
-                        p.config[key] = val
-                    
-                    p.config['client_id'] = self.token;          
+                    self.token = self.settings["meta"]["token"];                    
+                    p = Producer(setting, self.uid, self.token)       
                                                  
-                    self.__producerMap[self.token] = p;                    
+                    self.__producerMap[self.token] = p;       
+                    p.start();             
                     break;
-                
                                                
                 self.__initMqtt(self.token);
 #         
         return RestApiManager.get(url, None, user, self.secretKey, lambda json, err: conPointsCallback(json, err));     
     
     def __initMqtt(self, token):
+        
         self.logger.debug("Init MQTT with token : [%s]", token);
         
         clientId = "magistral.mqtt.gw." + token;
@@ -453,9 +435,11 @@ class Magistral(IMagistral, IAccessControl, IHistory):
             
             if channel == -1:
                 for ch in chs:
-                    p.send(topic = realTopic, value = msg, key = key, partition = int(ch));
+                    p.publish(topic = realTopic, value = msg, key = key, partition = int(ch))
+#                     p.send(topic = realTopic, value = msg, key = key, partition = int(ch));
             else: 
-                future = p.send(topic = realTopic, value = msg, key = key, partition = int(channel)).add_callback(lambda ack : pubCallback(ack));
+                future = p.publish(topic = realTopic, value = msg, key = key, partition = int(channel)).add_callback(lambda ack : pubCallback(ack));
+#                 future = p.send(topic = realTopic, value = msg, key = key, partition = int(channel)).add_callback(lambda ack : pubCallback(ack));
                         
                 def pubCallback(ack):                    
                     if callback is not None: 
@@ -575,6 +559,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         Terminates all network activity.
         Magistral should be re-instantiated after this
         """
+                
+        for p in self.__producerMap.values():
+            p.close()
         
         for bsmap in self.__consumerMap.values():
             for c in bsmap.values(): c.close();  
