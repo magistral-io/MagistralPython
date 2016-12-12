@@ -111,7 +111,7 @@ class GroupConsumer(threading.Thread):
                                          
                     for value in values:
                         msg = self.consumerRecord2Message(value);
-                        listener = self.map[msg.topic()][msg.channel()];
+                        listener = self.map[value[0]][msg.channel()];
                         if listener is not None: listener(msg);
                         
                 if len(data.values()) > 0: self.__consumer.commit_async(); 
