@@ -51,7 +51,7 @@ class GroupConsumer(threading.Thread):
                 fetch_max_wait_ms = 96,           
                 enable_auto_commit = False,
                 max_in_flight_requests_per_connection = 4,
-#                 api_version = (0, 10),            
+                api_version = (0, 10),            
                 group_id = groupId);
         else:
             self.__consumer = KafkaConsumer(
@@ -71,7 +71,7 @@ class GroupConsumer(threading.Thread):
                 ssl_keyfile = home + '/magistral/' + uid + '/key.pem',
                 ssl_cafile = home + '/magistral/' + uid + '/ca.pem',
                 ssl_certfile = home + '/magistral/' + uid + '/certificate.pem',
-#                 api_version = (0, 10),
+                api_version = (0, 10),
                 group_id = groupId);
         
         self.permissions = permissions;
@@ -96,7 +96,7 @@ class GroupConsumer(threading.Thread):
             except:
                 pass
                                         
-        msg = Message(record[0], record[1], payload, record[2], record[3])
+        msg = Message(record[0][41:], record[1], payload, record[2], record[3])
         return msg
 
     def run(self):

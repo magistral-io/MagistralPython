@@ -512,9 +512,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         assert count is not None, 'Number of records to return must be positive'
         
-        bs = self.settings['sub']['plain'][0]['bootstrap_servers'];
+        if self.ssl:
+            bs = self.settings['sub']['ssl'][0]['bootstrap_servers'] 
+        else:
+            bs = self.settings['sub']['plain'][0]['bootstrap_servers']
         
-        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None);
+        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None, self.uid);
         
         res = []
         if start < 0:
@@ -522,7 +525,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         else:
             res.extend(mc.historyForTimePeriod(topic, channel, start, end = int(round(time.time() * 1000)), limit = count));
             
-        if callback is not None: callable(res);
+        if callback is not None: callback(res);
         return res;        
             
     def historyIn(self, topic, channel, start=0, end=int(round(time.time() * 1000)), callback=None):
@@ -545,7 +548,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         bs = self.settings['sub']['plain'][0]['bootstrap_servers'];
         
-        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None);
+        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None, self.uid);
         res = mc.historyForTimePeriod(topic, channel, start, end)
         
         if res is not None:
