@@ -6,6 +6,8 @@ Created on 16 Sep 2016
 import jks, textwrap, base64
 from os.path import expanduser
 import os.path
+import atexit
+import shutil
 
 from os import makedirs
 
@@ -15,11 +17,16 @@ class JksHandler(object):
         pass
     
     @staticmethod
-    def writePkAndCerts(ks):
+    def writePkAndCerts(ks, token):
         
         uid = None
         
         home = expanduser("~")
+        
+        def deleteCerts(self, path):
+            shutil.rmtree(path)
+        
+        atexit.register(deleteCerts, home + '/magistral/' + token)
         
         for alias, pk in ks.private_keys.items(): 
             
@@ -27,10 +34,10 @@ class JksHandler(object):
             
             if pk.algorithm_oid == jks.util.RSA_ENCRYPTION_OID:
                 
-                if os.path.exists(home + '/magistral/' + uid) == False:
-                    makedirs(home + '/magistral/' + uid)
+                if os.path.exists(home + '/magistral/' + token) == False:
+                    makedirs(home + '/magistral/' + token)
                 
-                key = home + '/magistral/' + uid + '/key.pem'
+                key = home + '/magistral/' + token + '/key.pem'
                 
                 if os.path.exists(key): os.remove(key) 
                                 
@@ -43,7 +50,7 @@ class JksHandler(object):
              
             counter = 0;
             
-            cert = home + '/magistral/' + uid + '/certificate.pem'
+            cert = home + '/magistral/' + token + '/certificate.pem'
             if os.path.exists(cert): os.remove(cert)
             
             with open(cert, 'wb') as f:
@@ -58,7 +65,7 @@ class JksHandler(object):
                 
                 f.close()
             
-            ca = home + '/magistral/' + uid + '/ca.pem'
+            ca = home + '/magistral/' + token + '/ca.pem'
             if os.path.exists(ca): os.remove(ca)
             
             with open(ca, 'wb') as f:         
@@ -75,13 +82,12 @@ class JksHandler(object):
     @staticmethod
     def printJks(ks):
         
-        def print_pem(der_bytes, type):
-            print("-----BEGIN %s-----" % type)
+        def print_pem(der_bytes, _type_):
+            print("-----BEGIN %s-----" % _type_)
             print("\r\n".join(textwrap.wrap(base64.b64encode(der_bytes).decode('ascii'), 64)))
-            print("-----END %s-----" % type)
+            print("-----END %s-----" % _type_)
 
-    
-        for alias, pk in ks.private_keys.items():
+        for _, pk in ks.private_keys.items():
             print("Private key: %s" % pk.alias)
             if pk.algorithm_oid == jks.util.RSA_ENCRYPTION_OID:
                 print_pem(pk.pkey, "RSA PRIVATE KEY")
@@ -92,12 +98,12 @@ class JksHandler(object):
                 print_pem(c[1], "CERTIFICATE")
             print()
         
-        for alias, c in ks.certs.items():
+        for _, c in ks.certs.items():
             print("Certificate: %s" % c.alias)
             print_pem(c.cert, "CERTIFICATE")
             print()
         
-        for alias, sk in ks.secret_keys.items():
+        for _, sk in ks.secret_keys.items():
             print("Secret key: %s" % sk.alias)
             print("  Algorithm: %s" % sk.algorithm)
             print("  Key size: %d bits" % sk.key_size)

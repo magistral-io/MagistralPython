@@ -13,10 +13,12 @@ class MagistralConsumer(object):
     
     __HISTORY_DATA_FETCH_SIZE_LIMIT = 10000;
 
-    def __init__(self, pubKey, subKey, secretKey, bootstrap, cipher = None, uid = None):
+    def __init__(self, pubKey, subKey, secretKey, bootstrap, token, cipher = None, uid = None):
         self.__pubKey = pubKey
         self.__subKey = subKey
         self.__secretKey = secretKey
+        
+        self.__token = token
         
         self.uid = uid
                 
@@ -56,9 +58,9 @@ class MagistralConsumer(object):
                     max_in_flight_requests_per_connection = 4,
                     security_protocol = 'SSL',
                     ssl_check_hostname = False,
-                    ssl_keyfile = home + '/magistral/' + self.uid + '/key.pem',
-                    ssl_cafile = home + '/magistral/' + self.uid + '/ca.pem',
-                    ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem',
+                    ssl_keyfile = home + '/magistral/' + self.__token + '/key.pem',
+                    ssl_cafile = home + '/magistral/' + self.__token + '/ca.pem',
+                    ssl_certfile = home + '/magistral/' + self.__token + '/certificate.pem',
                     api_version = (0, 10));
             
         if (records > self.__HISTORY_DATA_FETCH_SIZE_LIMIT): records = self.__HISTORY_DATA_FETCH_SIZE_LIMIT;
@@ -141,9 +143,9 @@ class MagistralConsumer(object):
                         max_in_flight_requests_per_connection = 4,
                         security_protocol = 'SSL',
                         ssl_check_hostname = False,
-                        ssl_keyfile = home + '/magistral/' + self.uid + '/key.pem',
-                        ssl_cafile = home + '/magistral/' + self.uid + '/ca.pem',
-                        ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem',
+                        ssl_keyfile = home + '/magistral/' + self.__token + '/key.pem',
+                        ssl_cafile = home + '/magistral/' + self.__token + '/ca.pem',
+                        ssl_certfile = home + '/magistral/' + self.__token + '/certificate.pem',
                         api_version = (0, 10));
                         
             self.consumer = KafkaConsumer(bootstrap_servers = self.__bootstrap);
@@ -203,9 +205,9 @@ class MagistralConsumer(object):
                         max_in_flight_requests_per_connection = 4,
                         security_protocol = 'SSL',
                         ssl_check_hostname = False,
-                        ssl_keyfile = home + '/magistral/' + self.uid + '/key.pem',
-                        ssl_cafile = home + '/magistral/' + self.uid + '/ca.pem',
-                        ssl_certfile = home + '/magistral/' + self.uid + '/certificate.pem',
+                        ssl_keyfile = home + '/magistral/' + self.__token + '/key.pem',
+                        ssl_cafile = home + '/magistral/' + self.__token + '/ca.pem',
+                        ssl_certfile = home + '/magistral/' + self.__token + '/certificate.pem',
                         api_version = (0, 10));  
                       
             self.с.assign([x]);

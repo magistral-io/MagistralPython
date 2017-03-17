@@ -19,7 +19,7 @@ class GroupConsumer(threading.Thread):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
      
-    def __init__(self, threadId, name, sKey, bootstrapServers, groupId, permissions, cipher = None, uid = None):
+    def __init__(self, threadId, name, sKey, bootstrapServers, groupId, permissions, token, cipher = None, uid = None):
         threading.Thread.__init__(self)
         self.threadId = threadId
         self.name = name
@@ -68,9 +68,9 @@ class GroupConsumer(threading.Thread):
                 max_in_flight_requests_per_connection = 4,
                 security_protocol = 'SSL',
                 ssl_check_hostname = False,
-                ssl_keyfile = home + '/magistral/' + uid + '/key.pem',
-                ssl_cafile = home + '/magistral/' + uid + '/ca.pem',
-                ssl_certfile = home + '/magistral/' + uid + '/certificate.pem',
+                ssl_keyfile = home + '/magistral/' + token + '/key.pem',
+                ssl_cafile = home + '/magistral/' + token + '/ca.pem',
+                ssl_certfile = home + '/magistral/' + token + '/certificate.pem',
                 api_version = (0, 10),
                 group_id = groupId);
         

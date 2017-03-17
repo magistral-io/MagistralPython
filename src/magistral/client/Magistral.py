@@ -31,6 +31,7 @@ from magistral.client.sub.MagistralConsumer import MagistralConsumer
 from magistral.client.util.aes import AESCipher
 import shutil
 from magistral.client.pub.Producer import Producer
+import inspect
 
 
 class Magistral(IMagistral, IAccessControl, IHistory):
@@ -85,7 +86,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         self.__host = host;
         
     
-    def __doCerts(self, sts, sks):
+    def __doCerts(self, sts, sks, token):
         
         home = expanduser("~")
         
@@ -107,7 +108,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                            
         ks = jks.KeyStore.load(home + '/magistral/tmp/ks', 'magistral')
             
-        self.uid = JksHandler.writePkAndCerts(ks)
+        self.uid = JksHandler.writePkAndCerts(ks, token)
         
         if os.path.exists(home + '/magistral/tmp'): 
             shutil.rmtree(home + '/magistral/tmp')
@@ -125,11 +126,12 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                 self.logger.debug("Received Connection Points : %s", json)    
                 self.settings = JsonConverter.connectionSettings(json)
                 
-                self.__doCerts(self.settings['ts'], self.settings['ks'])
+                self.token = self.settings["meta"]["token"];
+                
+                self.__doCerts(self.settings['ts'], self.settings['ks'], self.token)
                             
                 for setting in (self.settings["pub"]["ssl"] if self.ssl else self.settings["pub"]["plain"]):
-                    
-                    self.token = self.settings["meta"]["token"];                    
+                                        
                     p = Producer(setting, self.uid, self.token)       
                                                  
                     self.__producerMap[self.token] = p;       
@@ -331,7 +333,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                     threadId = 'thread_id_consumer_' + group
                     name = 'thread_name_consumer_' + group
                     
-                    c = GroupConsumer(threadId, name, self.subKey, bs, group, self.__permissions, self.cipher, self.uid);
+                    c = GroupConsumer(threadId, name, self.subKey, bs, group, self.__permissions, self.token, self.cipher, self.uid);
                     self.__consumerMap[group][bs] = c;
             
             for bs, gc in self.__consumerMap[group].items():
@@ -517,10 +519,10 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         else:
             bs = self.settings['sub']['plain'][0]['bootstrap_servers']
         
-        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None, self.uid);
+        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, self.token, None, self.uid);
         
         res = []
-        if start < 0:
+        if inspect.ismethod(start) == False and start < 0:
             res.extend(mc.history(topic, channel, count));
         else:
             res.extend(mc.historyForTimePeriod(topic, channel, start, end = int(round(time.time() * 1000)), limit = count));
@@ -548,7 +550,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         bs = self.settings['sub']['plain'][0]['bootstrap_servers'];
         
-        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, None, self.uid);
+        mc = MagistralConsumer(self.pubKey, self.subKey, self.secretKey, bs, self.token, None, self.uid);
         res = mc.historyForTimePeriod(topic, channel, start, end)
         
         if res is not None:
