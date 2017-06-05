@@ -40,8 +40,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
     logger.setLevel(logging.INFO)
     
     __host = "app.magistral.io"
+    __port = 443
     
-    def __init__(self, pubKey, subKey, secretKey, cipher = None):
+    def __init__(self, pubKey, subKey, secretKey, cipher = None, host = "app.magistral.io", port = 443):
         
         assert pubKey is not None and subKey is not None and secretKey is not None, 'Publish, Subscribe and Secret key must be specified' 
         assert isinstance(pubKey, str) and isinstance(subKey, str) and isinstance(secretKey, str), 'Publish, Subscribe and Secret key must be type of str'
@@ -57,6 +58,9 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         self.pubKey = pubKey
         self.subKey = subKey
         self.secretKey = secretKey
+        
+        self.__host = host;
+        self.__port = port;
         
         if cipher is not None:
             assert isinstance(cipher, str), 'Cipher expected as string'
@@ -75,15 +79,6 @@ class Magistral(IMagistral, IAccessControl, IHistory):
                
         self.__connectionSettings()            
         self.permissions();
-        
-    def setHost(self, host):
-        """
-        Sets host name of coordinating node [dedicated deployments]
-        :param host: string URL of the host
-        """    
-        assert host is not None, 'Host name required'
-        assert host is not None, 'Host name required'
-        self.__host = host;
         
     
     def __doCerts(self, sts, sks, token):
@@ -115,7 +110,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
     def __connectionSettings(self):
         
-        url = "https://" + self.__host + "/api/magistral/net/connectionPoints";
+        url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/connectionPoints";
         user = self.pubKey + "|" + self.subKey;
 #         
         def conPointsCallback(json, err):
@@ -161,8 +156,8 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         self.__mqtt.on_connect = conCallback
         
-        self.logger.debug("Connect to MQTT with token : [%s:%d]", self.__host, 1883);        
-        self.__mqtt.connect(self.__host, port=1883, keepalive=60, bind_address="")
+        self.logger.debug("Connect to MQTT with token : [%s:%d]", self.__host, 8883);        
+        self.__mqtt.connect(self.__host, port=8883, keepalive=60, bind_address="")
         
 
     def permissions(self, topic=None, callback=None):
@@ -176,7 +171,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         """
         
         if self.__permissions is None:
-            url = "https://" + self.__host + "/api/magistral/net/permissions"
+            url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/permissions"
             
             params = None;
             if (topic != None): params = { "topic" : topic }
@@ -228,7 +223,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         assert isinstance(read, bool) and isinstance(write, bool), 'read/write permissions must be type of bool'
         
-        url = "https://" + self.__host + "/api/magistral/net/grant"
+        url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/grant"
         params = { 'user': user, 'topic': topic, 'read': read, 'write': write }
         
         if (channel > -1): 
@@ -246,7 +241,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         def grantRestCallback(json, err) :
             if (callback != None and err == None) : 
-                url = "https://" + self.__host + "/api/magistral/net/user_permissions"
+                url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/user_permissions"
                 RestApiManager.get(url, {"userName" : user}, auth, self.secretKey, lambda userPerms, err: updatedUserPermsCallback(userPerms, err))   
         
         RestApiManager.put(url, params, auth, self.secretKey, lambda json, err: grantRestCallback(json, err));
@@ -269,7 +264,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         assert user is not None, 'User name is required'
         assert topic is not None, 'Topic is required'
                 
-        url = "https://" + self.__host + "/api/magistral/net/revoke"
+        url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/revoke"
         params = { 'user': user, 'topic': topic }
         
         if (channel > -1): 
@@ -284,7 +279,7 @@ class Magistral(IMagistral, IAccessControl, IHistory):
         
         def delRestCallback(json, err) :
             if (callback != None and err == None) : 
-                url = "https://" + self.__host + "/api/magistral/net/user_permissions"
+                url = "https://" + self.__host + ":" + str(self.__port) + "/api/magistral/net/user_permissions"
                 RestApiManager.get(url, {"userName" : user}, auth, self.secretKey, lambda userPerms, err: updatedUserPermsCallback(userPerms, err))   
         
         RestApiManager.delete(url, params, auth, self.secretKey, lambda json, err: delRestCallback(json, err));
